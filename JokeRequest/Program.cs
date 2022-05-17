@@ -9,15 +9,12 @@ namespace JokeRequest
     {
         static void Main(string[] args)
         {
-            int randomPage = 0;
-            int randomJoke = 0; 
-            string pageOfJokes = $"https://rozrywka.ox.pl/rozne?page={randomPage}";
-            string xPathOfJoke = $"/html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[{randomJoke}]/div[1]/div/p";
+           
             string userInput;
 
             while (true)
             {
-                JokeMenu();
+                DisplayMenuOptions();
                 userInput = Console.ReadLine();
                 Console.Clear();
 
@@ -26,15 +23,15 @@ namespace JokeRequest
                     case "1":
                         while (true)
                         {
-                            randomPage = RandomNumberFromTo(1, 59);
-                            randomJoke = RandomNumberFromTo(1, 20);
-                            TextFromPageByHtml(pageOfJokes, xPathOfJoke);
+                            string pageUrl = GetPageUrl(RandomNumberFromTo(1, 59));
+                            string jokeXPath = GetJokeXPath(RandomNumberFromTo(1, 5));
+                            TextFromPageByHtml(pageUrl, jokeXPath);
                             Console.WriteLine("Aby wylosować kolejny żart kliknij dowolny przycisk, aby wrócić do menu naciśnij 1 i Enter.");
 
                             string input = Console.ReadLine();
                             if (input == "1")
                             {
-                                return;
+                                break;
                             }
                         }
                         break;
@@ -44,11 +41,14 @@ namespace JokeRequest
                         {
 
                             Console.WriteLine("Wybierz stronę z kawałami:");
-                            randomPage = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 59));
+                            int userPageChoice = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 59));
                             Console.WriteLine("Wybierz numer kawału:");
-                            randomJoke = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 20));
+                            int userJokeChoice = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 20));
 
-                            TextFromPageByHtml(pageOfJokes, xPathOfJoke);
+                            string pageUrl = GetPageUrl(userPageChoice);
+                            string jokeXPath = GetJokeXPath(userJokeChoice);
+
+                            TextFromPageByHtml(pageUrl, jokeXPath);
 
                             Console.WriteLine("Jeżeli wpisana wartość nie jest numerem to został on wylosowany! hehe");
                             Console.WriteLine("Aby wybrać kolejny żart kliknij dowolny przycisk, aby wrócić do menu naciśnij 1 i Enter.");
@@ -56,13 +56,16 @@ namespace JokeRequest
                             string input = Console.ReadLine();
                             if (input == "1")
                             {
-                                return;
+                                break;
                             }
                         }
                         break;
                         case "3":
                         Console.WriteLine("Do zobaczenia!");
                         return;
+                        //case "4":
+                        //RequestExternalApi();
+                        //break;
                     default:
                         Console.WriteLine("Nie ma takiej opcji!");
                         Console.ReadLine();
@@ -82,8 +85,9 @@ namespace JokeRequest
         // /html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[2]/div[1]/div/p
         // /html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[2]/div[1]/div/p
 
-        static void JokeMenu()
+        static void DisplayMenuOptions()
         {
+            Console.Clear();
             Console.WriteLine("Wybierz co chcesz zrobić:");
             Console.WriteLine("1. Wylosować żart.");
             Console.WriteLine("2. Wybrać stronę i żart.");
@@ -95,7 +99,8 @@ namespace JokeRequest
             //this could be any web page
             HtmlDocument document = web.Load(page);
             //HtmlNode[] nodes = document.DocumentNode.SelectNodes(xPath).ToArray();
-
+            Object documentNode = document.DocumentNode;
+            Object nodes = document.DocumentNode.SelectNodes(xPath);
             HtmlNode nodex = document.DocumentNode.SelectNodes(xPath).First();
 
             string myNewString = nodex.SelectNodes(xPath).First().InnerText;
@@ -136,5 +141,35 @@ namespace JokeRequest
                 return otherNumber;
             }
         }
+
+        static string GetPageUrl(int pageNumber)
+        {
+            return $"https://rozrywka.ox.pl/rozne?page={pageNumber}";
+        }
+        static string GetJokeXPath(int pageNumber)
+        {
+            return $"/html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[{pageNumber}]/div[1]/div/p";
+        }
+
+    //    async static void RequestExternalApi()
+    //    {
+    //        var client = new HttpClient();
+    //        var request = new HttpRequestMessage
+    //        {
+    //            Method = HttpMethod.Get,
+    //            RequestUri = new Uri("https://dad-jokes.p.rapidapi.com/random/joke"),
+    //            Headers =
+    //{
+    //    { "X-RapidAPI-Host", "dad-jokes.p.rapidapi.com" },
+    //    { "X-RapidAPI-Key", "3e23185590msh261d9986bfbbf02p11c230jsn4e131737301c" },
+    //},
+    //        };
+    //        using (var response = await client.SendAsync(request))
+    //        {
+    //            response.EnsureSuccessStatusCode();
+    //            var body = await response.Content.ReadAsStringAsync();
+    //            Console.WriteLine(body);
+    //        }
+    //    }
     }
 }
