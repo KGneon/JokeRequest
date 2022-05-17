@@ -5,67 +5,133 @@ using HtmlAgilityPack;
 
 namespace JokeRequest
 {
+    class JokeProviderFactory
+    {
+
+        private HtmlJokeScraper scraper;
+        public JokeProviderFactory(HtmlJokeScraper scraper)
+        {
+            this.scraper = scraper;
+        }
+        public IJokeProvider PickJokeProvider(string userInput)
+        {
+            switch (userInput)
+            {
+                case "1":
+                    return new RandomJokeProvider(scraper);
+                case "2":
+                    return new UserPickJokeProvider(scraper);
+                default:
+                    throw new ArgumentException("Joke provider not exists");
+            }
+        }
+    }
+    interface IJokeProvider
+    {
+        public string getJoke();
+    }
+
+    class RandomJokeProvider : IJokeProvider
+    {
+        private const int RANDOM_PAGE_RANGE_MAX = 59;
+        private const int RANDOM_PAGE_RANGE_MIN = 1;
+        private const int RANDOM_JOKE_RANGE_MAX = 5;
+        private const int RANDOM_JOKE_RANGE_MIN = 1;
+
+
+        private HtmlJokeScraper scraper;
+        public RandomJokeProvider(HtmlJokeScraper scraper)
+        {
+            this.scraper = scraper;
+        }
+        public string getJoke()
+        {
+            Random rand = new Random();
+            int randomPageNumber = rand.Next(RANDOM_PAGE_RANGE_MIN, RANDOM_PAGE_RANGE_MAX);
+            int randomJokeNumber = rand.Next(RANDOM_JOKE_RANGE_MIN, RANDOM_JOKE_RANGE_MAX);
+            return scraper.ScrapeJoke(randomPageNumber, randomJokeNumber);
+        }
+
+    }
+
+
+    class UserPickJokeProvider : IJokeProvider
+    {
+        private HtmlJokeScraper scraper;
+        public UserPickJokeProvider(HtmlJokeScraper scraper)
+        {
+            this.scraper = scraper;
+        }
+        public string getJoke()
+        {
+            try
+            {
+                Console.WriteLine("Wybierz stronę z kawałami:");
+                int userPageChoice = int.Parse(Console.ReadLine());
+                Console.WriteLine("Wybierz numer kawału:");
+                int userJokeChoice = int.Parse(Console.ReadLine());
+
+                return scraper.ScrapeJoke(userPageChoice, userJokeChoice);
+            } 
+            catch (Exception ex)
+            {
+                return "No jokes for you. User input was invalid.";
+            }
+
+        }
+
+    }
+
+    class HtmlJokeScraper
+    {
+        public string ScrapeJoke(int page, int jokeNumber)
+        {
+            string jokeUrl = GetPageUrl(page);
+            string jokeXPath = GetJokeXPath(jokeNumber);
+
+            HtmlWeb web = new HtmlWeb();
+            HtmlDocument document = web.Load(jokeUrl);
+            return document.DocumentNode.SelectNodes(jokeXPath).First().InnerText;
+        }
+        private string GetPageUrl(int pageNumber)
+        {
+            return $"https://rozrywka.ox.pl/rozne?page={pageNumber}";
+        }
+        private string GetJokeXPath(int pageNumber)
+        {
+            return $"/html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[{pageNumber}]/div[1]/div/p";
+        }
+
+    }
+
     class Program
     {
         static void Main(string[] args)
         {
-           
-            string userInput;
+            HtmlJokeScraper scraper = new HtmlJokeScraper();
+            JokeProviderFactory JokeProviderFactory = new JokeProviderFactory(scraper); // TODO poczytać o Factory method!
 
             while (true)
             {
                 DisplayMenuOptions();
-                userInput = Console.ReadLine();
+                string userInput = Console.ReadLine();
                 Console.Clear();
 
                 switch (userInput)
                 {
                     case "1":
-                        while (true)
-                        {
-                            string pageUrl = GetPageUrl(RandomNumberFromTo(1, 59));
-                            string jokeXPath = GetJokeXPath(RandomNumberFromTo(1, 5));
-                            TextFromPageByHtml(pageUrl, jokeXPath);
-                            Console.WriteLine("Aby wylosować kolejny żart kliknij dowolny przycisk, aby wrócić do menu naciśnij 1 i Enter.");
-
-                            string input = Console.ReadLine();
-                            if (input == "1")
-                            {
-                                break;
-                            }
-                        }
-                        break;
                     case "2":
-
-                        while (true)
+                        IJokeProvider jokeProvider = JokeProviderFactory.PickJokeProvider(userInput);
+                        do
                         {
-
-                            Console.WriteLine("Wybierz stronę z kawałami:");
-                            int userPageChoice = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 59));
-                            Console.WriteLine("Wybierz numer kawału:");
-                            int userJokeChoice = InputCheckIfInt(Console.ReadLine(), RandomNumberFromTo(1, 20));
-
-                            string pageUrl = GetPageUrl(userPageChoice);
-                            string jokeXPath = GetJokeXPath(userJokeChoice);
-
-                            TextFromPageByHtml(pageUrl, jokeXPath);
-
-                            Console.WriteLine("Jeżeli wpisana wartość nie jest numerem to został on wylosowany! hehe");
-                            Console.WriteLine("Aby wybrać kolejny żart kliknij dowolny przycisk, aby wrócić do menu naciśnij 1 i Enter.");
-
-                            string input = Console.ReadLine();
-                            if (input == "1")
-                            {
-                                break;
-                            }
-                        }
+                            Console.Clear();
+                            string joke = jokeProvider.getJoke().Trim();
+                            Console.WriteLine(joke);
+                        } while (continueCurrentOption());
                         break;
-                        case "3":
+                    case "3":
                         Console.WriteLine("Do zobaczenia!");
                         return;
-                        //case "4":
-                        //RequestExternalApi();
-                        //break;
                     default:
                         Console.WriteLine("Nie ma takiej opcji!");
                         Console.ReadLine();
@@ -73,103 +139,26 @@ namespace JokeRequest
                         break;
 
                 }
-
-
-
             }
-
-
         }
-
-        // /html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[1]/div[1]/div/p/text()
-        // /html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[2]/div[1]/div/p
-        // /html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[2]/div[1]/div/p
-
         static void DisplayMenuOptions()
         {
-            Console.Clear();
             Console.WriteLine("Wybierz co chcesz zrobić:");
             Console.WriteLine("1. Wylosować żart.");
             Console.WriteLine("2. Wybrać stronę i żart.");
             Console.WriteLine("3. Zamknąć aplikację.");
         }
-        static void TextFromPageByHtml(string page, string xPath)
-        {
-            HtmlWeb web = new HtmlWeb();
-            //this could be any web page
-            HtmlDocument document = web.Load(page);
-            //HtmlNode[] nodes = document.DocumentNode.SelectNodes(xPath).ToArray();
-            Object documentNode = document.DocumentNode;
-            Object nodes = document.DocumentNode.SelectNodes(xPath);
-            HtmlNode nodex = document.DocumentNode.SelectNodes(xPath).First();
 
-            string myNewString = nodex.SelectNodes(xPath).First().InnerText;
-            ShowSplitedArrayOfString(MakeSplitedSting(myNewString));
-            //Console.WriteLine(myNewString);
-        }
-
-        static int RandomNumberFromTo(int from, int to)
+        static Boolean continueCurrentOption()
         {
-            Random rnd = new Random();
-            return rnd.Next(from, to + 1);
-        }
-
-        static string[] MakeSplitedSting(string stringText)
-        {
-            string[] stringArray = stringText.Split("(?=.)(?=?)(?=:)");
-            return stringArray;
-        }
-
-        static void ShowSplitedArrayOfString(string[] arrayOfString)
-        {
-            foreach (string str in arrayOfString)
+            Console.WriteLine("Aby kontynuowac wcisnij dowolny przycisk, aby wrócić do menu naciśnij 1 i Enter.");
+            string input = Console.ReadLine();
+            if (input == "1")
             {
-                Console.WriteLine(str);
+                Console.Clear();
+                return false;
             }
+            return true;
         }
-        static int InputCheckIfInt(string userInput, int other)
-        {
-            int otherNumber = other;
-            if (int.TryParse(userInput, out int j))
-            {
-                return j;
-            }
-            else
-            {
-                Console.WriteLine("Wrong input. Next time write a number. Press ENTER to continue...");
-                Console.ReadLine();
-                return otherNumber;
-            }
-        }
-
-        static string GetPageUrl(int pageNumber)
-        {
-            return $"https://rozrywka.ox.pl/rozne?page={pageNumber}";
-        }
-        static string GetJokeXPath(int pageNumber)
-        {
-            return $"/html/body/div[1]/main/div[6]/div/div[1]/div[3]/div[{pageNumber}]/div[1]/div/p";
-        }
-
-    //    async static void RequestExternalApi()
-    //    {
-    //        var client = new HttpClient();
-    //        var request = new HttpRequestMessage
-    //        {
-    //            Method = HttpMethod.Get,
-    //            RequestUri = new Uri("https://dad-jokes.p.rapidapi.com/random/joke"),
-    //            Headers =
-    //{
-    //    { "X-RapidAPI-Host", "dad-jokes.p.rapidapi.com" },
-    //    { "X-RapidAPI-Key", "3e23185590msh261d9986bfbbf02p11c230jsn4e131737301c" },
-    //},
-    //        };
-    //        using (var response = await client.SendAsync(request))
-    //        {
-    //            response.EnsureSuccessStatusCode();
-    //            var body = await response.Content.ReadAsStringAsync();
-    //            Console.WriteLine(body);
-    //        }
-    //    }
     }
 }
