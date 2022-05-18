@@ -103,7 +103,7 @@ namespace JokeRequest
             Object nodes = document.DocumentNode.SelectNodes(xPath);
             HtmlNode nodex = document.DocumentNode.SelectNodes(xPath).First();
 
-            string myNewString = nodex.SelectNodes(xPath).First().InnerText;
+            string myNewString = nodex.SelectNodes(xPath).First().InnerText.Trim();
             ShowSplitedArrayOfString(MakeSplitedSting(myNewString));
             //Console.WriteLine(myNewString);
         }
